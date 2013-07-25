@@ -38,7 +38,6 @@ public class OEPasswordEncoder implements PasswordEncoder {
     private final Logger log = LoggerFactory.getLogger(getClass());
 
     /**
-     *
      * @param rawPass
      * @param encryptDetails an {@link EncryptionDetails} object
      * @return The encrypted version of the password
@@ -46,32 +45,34 @@ public class OEPasswordEncoder implements PasswordEncoder {
      */
     @Override
     public String encodePassword(String rawPass, Object encryptDetails) throws DataAccessException {
-        if ((encryptDetails == null) || !(encryptDetails.getClass().equals(EncryptionDetails.class))) {
+        if ((encryptDetails == null) || !(encryptDetails.getClass().equals(EncryptionDetails.class)) ||
+            ((EncryptionDetails) encryptDetails).getAlgorithm() == null ||
+            ((EncryptionDetails) encryptDetails).getSalt() == null) {
+            log.warn("Did not get information needed to encode the password");
             return "";
         }
         String encPass = "";
         String salt = ((EncryptionDetails) encryptDetails).getSalt();
         String algorithm = ((EncryptionDetails) encryptDetails).getAlgorithm();
-        if (algorithm.equals("SHA-1")) {
+        if ("SHA-1".equals(algorithm)) {
             log.warn("SHA-1 DEPRECATED, retained for compatibility.");
             encPass = DigestUtils.sha1Hex(salt + rawPass);
-        } else if (algorithm.equals("SHA-256")) {
+        } else if ("SHA-256".equals(algorithm)) {
             log.warn("SHA-256 DEPRECATED, retained for compatibility.");
             encPass = DigestUtils.sha256Hex(salt + rawPass);
-        } else if (algorithm.equals("SHA-384")) {
+        } else if ("SHA-384".equals(algorithm)) {
             log.warn("SHA-384 DEPRECATED, retained for compatibility.");
             encPass = DigestUtils.sha384Hex(salt + rawPass);
-        } else if (algorithm.equals("SHA-512")) {
+        } else if ("SHA-512".equals(algorithm)) {
             log.warn("SHA-512 DEPRECATED, retained for compatibility.");
             encPass = DigestUtils.sha512Hex(salt + rawPass);
-        } else if (algorithm.equals("BCrypt")) {
+        } else if ("BCrypt".equals(algorithm)) {
             encPass = BCrypt.hashpw(rawPass, salt);
         }
         return encPass;
     }
 
     /**
-     *
      * @param encPass
      * @param rawPass
      * @param encryptDetails an {@link EncryptionDetails} object
@@ -80,12 +81,15 @@ public class OEPasswordEncoder implements PasswordEncoder {
      */
     @Override
     public boolean isPasswordValid(String encPass, String rawPass, Object encryptDetails) throws DataAccessException {
-        if ((encryptDetails == null) || !(encryptDetails.getClass().equals(EncryptionDetails.class))) {
+        if ((encryptDetails == null) || !(encryptDetails.getClass().equals(EncryptionDetails.class)) ||
+            ((EncryptionDetails) encryptDetails).getAlgorithm() == null ||
+            ((EncryptionDetails) encryptDetails).getSalt() == null) {
+            log.warn("Did not get information needed to validate the password");
             return false;
         }
         String algorithm = ((EncryptionDetails) encryptDetails).getAlgorithm();
         boolean checkPass = false;
-        if (algorithm.equals("BCrypt")) {
+        if ("BCrypt".equals(algorithm)) {
             checkPass = BCrypt.checkpw(rawPass, encPass);
         } else {
             checkPass = encodePassword(rawPass, encryptDetails).equals(encPass);
